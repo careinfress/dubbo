@@ -1,0 +1,3 @@
+black = org.apache.dubbo.study.impl.BlackCar
+red = org.apache.dubbo.study.impl.RedCar
+##org.apache.dubbo.study.impl.CarWapper

@@ -46,7 +46,10 @@ public abstract class AbstractLoadBalance implements LoadBalance {
      * @return weight which takes warmup into account
      */
     static int calculateWarmupWeight(int uptime, int warmup, int weight) {
+        // 计算后的权重 = uptime/(warmup/weight)
+        // 除以一个数等于乘以一个数的倒数，所以上面的式子变成 （uptime / warmup） * weight
         int ww = (int) ( uptime / ((float) warmup / weight));
+        // 如果计算后的权重小于1则返回1，否则返回计算后的权重和配置的权重中较小的一个
         return ww < 1 ? 1 : (Math.min(ww, weight));
     }
 
@@ -76,18 +79,24 @@ public abstract class AbstractLoadBalance implements LoadBalance {
         int weight;
         URL url = invoker.getUrl();
         // Multiple registry scenario, load balance among multiple registries.
+        // 多个注册表方案，多个注册表之间的负载平衡
         if (REGISTRY_SERVICE_REFERENCE_PATH.equals(url.getServiceInterface())) {
             weight = url.getParameter(REGISTRY_KEY + "." + WEIGHT_KEY, DEFAULT_WEIGHT);
         } else {
+            // 估计是从注解中获取权重
             weight = url.getMethodParameter(invocation.getMethodName(), WEIGHT_KEY, DEFAULT_WEIGHT);
             if (weight > 0) {
+                // 获取 invoker 的启动时间戳
                 long timestamp = invoker.getUrl().getParameter(TIMESTAMP_KEY, 0L);
                 if (timestamp > 0L) {
+                    // 当前时间减去启动时间小于0 返回1
                     long uptime = System.currentTimeMillis() - timestamp;
                     if (uptime < 0) {
                         return 1;
                     }
+                    // 获取 invoker 的预热时间，默认是10分钟
                     int warmup = invoker.getUrl().getParameter(WARMUP_KEY, DEFAULT_WARMUP);
+                    // 小于预热时间重新集群权重
                     if (uptime > 0 && uptime < warmup) {
                         weight = calculateWarmupWeight((int)uptime, warmup, weight);
                     }
